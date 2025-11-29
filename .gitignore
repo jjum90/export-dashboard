@@ -1,0 +1,40 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Backend (Spring Boot)
+backend/target/
+backend/.mvn/
+backend/mvnw*
+backend/*.jar
+backend/*.war
+
+# Frontend (Vue.js)
+frontend/node_modules/
+frontend/dist/
+frontend/.nuxt/
+frontend/.output/
+frontend/.env.local
+frontend/.env.*.local
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Temp files
+*.tmp
+*.temp

@@ -1,0 +1,184 @@
+package com.export.dashboard.architecture;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.junit.jupiter.ArchTest;
+import com.tngtech.archunit.lang.ArchRule;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
+import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
+
+/**
+ * DDD 아키텍처 규칙을 검증하는 ArchUnit 테스트
+ * Clean Architecture와 DDD 원칙을 코드 레벨에서 강제
+ */
+class DddArchitectureTest {
+
+    @ArchTest
+    static final ArchRule layered_architecture_should_be_respected = layeredArchitecture()
+        .consideringAllDependencies()
+        .layer("Domain").definedBy("..domain..")
+        .layer("Application").definedBy("..application..")
+        .layer("Infrastructure").definedBy("..infrastructure..")
+        .layer("Interfaces").definedBy("..interfaces..")
+        .layer("Controller").definedBy("..controller..")
+
+        .whereLayer("Domain").mayNotAccessAnyLayer()
+        .whereLayer("Application").mayOnlyAccessLayers("Domain")
+        .whereLayer("Infrastructure").mayOnlyAccessLayers("Domain", "Application")
+        .whereLayer("Interfaces").mayOnlyAccessLayers("Application", "Domain")
+        .whereLayer("Controller").mayOnlyAccessLayers("Application", "Domain");
+
+    @ArchTest
+    static final ArchRule domain_should_not_depend_on_external_frameworks =
+        noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                "org.springframework..",
+                "jakarta.persistence..",
+                "javax.persistence..",
+                "org.hibernate.."
+            );
+
+    @ArchTest
+    static final ArchRule entities_should_be_in_domain_model_package =
+        classes()
+            .that().areAnnotatedWith("jakarta.persistence.Entity")
+            .or().areAnnotatedWith("javax.persistence.Entity")
+            .should().resideInAPackage("..domain.model..");
+
+    @ArchTest
+    static final ArchRule repositories_should_be_interfaces =
+        classes()
+            .that().resideInAPackage("..domain.repository..")
+            .should().beInterfaces();
+
+    @ArchTest
+    static final ArchRule repository_implementations_should_be_in_infrastructure =
+        classes()
+            .that().haveNameMatching(".*RepositoryImpl")
+            .should().resideInAPackage("..infrastructure.repository..");
+
+    @ArchTest
+    static final ArchRule services_should_not_be_annotated_with_entity =
+        noClasses()
+            .that().resideInAPackage("..service..")
+            .should().beAnnotatedWith("jakarta.persistence.Entity")
+            .orShould().beAnnotatedWith("javax.persistence.Entity");
+
+    @ArchTest
+    static final ArchRule domain_services_should_not_be_spring_services =
+        noClasses()
+            .that().resideInAPackage("..domain.service..")
+            .should().beAnnotatedWith("org.springframework.stereotype.Service");
+
+    @ArchTest
+    static final ArchRule application_services_should_be_spring_services =
+        classes()
+            .that().resideInAPackage("..application.service..")
+            .should().beAnnotatedWith("org.springframework.stereotype.Service");
+
+    @ArchTest
+    static final ArchRule value_objects_should_be_immutable =
+        classes()
+            .that().resideInAPackage("..domain.model..")
+            .and().areRecords()
+            .should().bePackagePrivate()
+            .orShould().bePublic();
+
+    @ArchTest
+    static final ArchRule controllers_should_only_use_application_services =
+        classes()
+            .that().resideInAPackage("..controller..")
+            .should().onlyDependOnClassesThat(
+                classes -> classes.resideInAnyPackage(
+                    "..application.service..",
+                    "..application.dto..",
+                    "..domain.model..",
+                    "org.springframework..",
+                    "jakarta.validation..",
+                    "java..",
+                    "org.slf4j.."
+                )
+            );
+
+    @ArchTest
+    static final ArchRule dto_classes_should_be_in_application_layer =
+        classes()
+            .that().haveSimpleNameEndingWith("Request")
+            .or().haveSimpleNameEndingWith("Response")
+            .or().haveSimpleNameEndingWith("Dto")
+            .should().resideInAPackage("..application.dto..");
+
+    @ArchTest
+    static final ArchRule exceptions_should_extend_proper_base_classes =
+        classes()
+            .that().resideInAPackage("..domain.exception..")
+            .and().haveSimpleNameEndingWith("Exception")
+            .should().beAssignableTo(RuntimeException.class);
+
+    @ArchTest
+    static final ArchRule no_cycles_in_domain_packages =
+        slices()
+            .matching("..domain.(*)..")
+            .should().beFreeOfCycles();
+
+    @ArchTest
+    static final ArchRule aggregate_roots_should_not_reference_other_aggregates_directly =
+        noClasses()
+            .that().resideInAPackage("..domain.model..")
+            .and().areAnnotatedWith("jakarta.persistence.Entity")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..domain.model..")
+            .and().areAnnotatedWith("jakarta.persistence.Entity");
+
+    @ArchTest
+    static final ArchRule repositories_should_only_be_accessed_by_services =
+        classes()
+            .that().resideInAPackage("..domain.repository..")
+            .should().onlyBeAccessed().byAnyPackage(
+                "..application.service..",
+                "..domain.service..",
+                "..infrastructure.repository.."
+            );
+
+    @ArchTest
+    static final ArchRule infrastructure_should_not_be_accessed_by_domain =
+        noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().accessClassesThat().resideInAPackage("..infrastructure..");
+
+    @ArchTest
+    static final ArchRule factory_methods_should_be_static =
+        methods()
+            .that().areDeclaredInClassesThat().resideInAPackage("..domain.model..")
+            .and().haveNameMatching("create.*|of|from")
+            .should().beStatic()
+            .andShould().bePublic();
+
+    @ArchTest
+    static final ArchRule domain_events_should_be_immutable =
+        classes()
+            .that().resideInAPackage("..domain.event..")
+            .should().beRecords()
+            .orShould().haveOnlyFinalFields();
+
+    @ArchTest
+    static final ArchRule configuration_classes_should_be_in_config_package =
+        classes()
+            .that().areAnnotatedWith("org.springframework.context.annotation.Configuration")
+            .should().resideInAPackage("..config..");
+
+    @ArchTest
+    static final ArchRule no_field_injection_in_services =
+        noFields()
+            .that().areDeclaredInClassesThat().resideInAnyPackage("..service..")
+            .should().beAnnotatedWith("org.springframework.beans.factory.annotation.Autowired");
+
+    @ArchTest
+    static final ArchRule constructor_injection_should_be_used =
+        constructors()
+            .that().areDeclaredInClassesThat().areAnnotatedWith("org.springframework.stereotype.Service")
+            .or().areDeclaredInClassesThat().areAnnotatedWith("org.springframework.stereotype.Component")
+            .should().bePublic();
+}

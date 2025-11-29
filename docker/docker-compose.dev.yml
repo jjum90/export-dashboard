@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: export-dashboard-postgres-dev
+    environment:
+      POSTGRES_DB: export_dashboard_dev
+      POSTGRES_USER: export_user
+      POSTGRES_PASSWORD: export_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - export-dev-network
+
+  # Redis Cache for Development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: export-dashboard-redis-dev
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - export-dev-network
+
+  # pgAdmin for PostgreSQL Database Management (Development)
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: export-dashboard-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@export-dashboard-dev.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5051:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres-dev
+    networks:
+      - export-dev-network
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  pgadmin_dev_data:
+
+networks:
+  export-dev-network:
+    driver: bridge
