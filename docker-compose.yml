@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     container_name: export-dashboard-postgres
     environment:
-      POSTGRES_DB: export_dashboard
-      POSTGRES_USER: export_user
-      POSTGRES_PASSWORD: export_password
+      POSTGRES_DB: ${POSTGRES_DB:-export_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-export_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-export_password}
     ports:
       - "5432:5432"
     volumes:
@@ -21,6 +21,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: export-dashboard-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
     ports:
       - "6379:6379"
     volumes:
@@ -36,10 +37,11 @@ services:
     container_name: export-dashboard-backend
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - DB_USERNAME=export_user
-      - DB_PASSWORD=export_password
+      - DB_USERNAME=${DB_USERNAME:-export_user}
+      - DB_PASSWORD=${DB_PASSWORD:-export_password}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
     ports:
       - "8080:8080"
     depends_on:
@@ -68,8 +70,8 @@ services:
     image: dpage/pgadmin4:8.13
     container_name: export-dashboard-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@export-dashboard.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@export-dashboard.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"
