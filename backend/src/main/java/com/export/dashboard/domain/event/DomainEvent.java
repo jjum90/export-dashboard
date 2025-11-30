@@ -35,43 +35,4 @@ public interface DomainEvent {
     default int version() {
         return 1;
     }
-
-    /**
-     * 이벤트 생성을 위한 팩토리 메서드
-     */
-    @SuppressWarnings("unchecked")
-    static <T extends DomainEvent> T create(Class<T> eventType, String aggregateId, Object eventData) {
-        var eventId = UUID.randomUUID();
-        var occurredOn = Instant.now();
-
-        String typeName = eventType.getSimpleName();
-
-        if ("ExportStatisticCreated".equals(typeName)) {
-            return eventType.cast(
-                new ExportStatisticCreated(eventId, occurredOn, aggregateId, (ExportStatisticData) eventData)
-            );
-        } else if ("ExportStatisticUpdated".equals(typeName)) {
-            return eventType.cast(
-                new ExportStatisticUpdated(eventId, occurredOn, aggregateId, (ExportStatisticData) eventData)
-            );
-        } else if ("CountryActivated".equals(typeName)) {
-            return eventType.cast(
-                new CountryActivated(eventId, occurredOn, aggregateId, (CountryData) eventData)
-            );
-        } else if ("CountryDeactivated".equals(typeName)) {
-            return eventType.cast(
-                new CountryDeactivated(eventId, occurredOn, aggregateId, (CountryData) eventData)
-            );
-        } else if ("ProductCategoryCreated".equals(typeName)) {
-            return eventType.cast(
-                new ProductCategoryCreated(eventId, occurredOn, aggregateId, (ProductCategoryData) eventData)
-            );
-        } else if ("ExportThresholdExceeded".equals(typeName)) {
-            return eventType.cast(
-                new ExportThresholdExceeded(eventId, occurredOn, aggregateId, (ThresholdData) eventData)
-            );
-        } else {
-            throw new IllegalArgumentException("지원하지 않는 이벤트 타입: " + typeName);
-        }
-    }
 }

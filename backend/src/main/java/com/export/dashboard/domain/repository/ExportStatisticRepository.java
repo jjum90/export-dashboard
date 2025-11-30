@@ -29,6 +29,11 @@ public interface ExportStatisticRepository {
     Optional<ExportStatistic> findByCountryAndProductAndPeriod(Country country, ProductCategory productCategory, ExportPeriod period);
 
     /**
+     * 특정 국가, 상품, 년월의 수출 통계 조회 (배치 작업용)
+     */
+    Optional<ExportStatistic> findByCountryAndProductCategoryAndPeriod(Country country, ProductCategory productCategory, Integer year, Integer month);
+
+    /**
      * 특정 국가, 상품, 기간의 수출 통계 목록 조회 (복수 결과 허용)
      */
     List<ExportStatistic> findAllByCountryAndProductAndPeriod(Country country, ProductCategory productCategory, ExportPeriod period);

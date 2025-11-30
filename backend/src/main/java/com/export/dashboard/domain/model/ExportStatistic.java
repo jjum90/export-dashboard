@@ -57,6 +57,23 @@ public class ExportStatistic extends AggregateRoot {
     @Column(name = "quantity_unit", length = 20)
     private String quantityUnit;
 
+    // Import data fields (from Customs API)
+    @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "amount", column = @Column(name = "import_value_usd", precision = 15, scale = 2)),
+        @AttributeOverride(name = "currency", column = @Column(name = "currency", length = 3))
+    })
+    private Money importValue;
+
+    @Column(name = "import_weight_kg", precision = 15, scale = 3)
+    private BigDecimal importWeightKg;
+
+    @Column(name = "balance_of_payments", precision = 15, scale = 2)
+    private BigDecimal balanceOfPayments;
+
+    @Column(name = "data_source", length = 20)
+    private String dataSource; // MANUAL or CUSTOMS_API
+
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "growth_rate_yoy", precision = 5, scale = 2))
     private Percentage growthRateYoy;
@@ -79,6 +96,7 @@ public class ExportStatistic extends AggregateRoot {
         this.exportValue = validateExportValue(exportValue);
         this.growthRateYoy = Percentage.zero();
         this.marketShare = Percentage.zero();
+        this.dataSource = "MANUAL"; // Default to manual entry
 
         // 수출 통계 생성 이벤트 발행
         publishCreatedEvent();
@@ -179,6 +197,36 @@ public class ExportStatistic extends AggregateRoot {
         throw new UnsupportedOperationException("Repository를 통해 조회해야 합니다.");
     }
 
+    // Import data business methods
+    public void updateImportData(Money importValue, BigDecimal importWeightKg, BigDecimal balanceOfPayments) {
+        this.importValue = importValue;
+        this.importWeightKg = importWeightKg;
+        this.balanceOfPayments = balanceOfPayments;
+    }
+
+    public void markAsCustomsApiData() {
+        this.dataSource = "CUSTOMS_API";
+    }
+
+    public void markAsManualData() {
+        this.dataSource = "MANUAL";
+    }
+
+    public boolean isCustomsApiData() {
+        return "CUSTOMS_API".equals(this.dataSource);
+    }
+
+    public boolean hasImportData() {
+        return importValue != null && importValue.amount() != null;
+    }
+
+    public Money calculateTradeBalance() {
+        if (!hasImportData()) {
+            return exportValue; // No import data, trade balance equals export value
+        }
+        return exportValue.subtract(importValue);
+    }
+
     // Validation methods
     private Country validateCountry(Country country) {
         if (country == null) {
@@ -264,6 +312,22 @@ public class ExportStatistic extends AggregateRoot {
 
     public Long getVersion() {
         return version;
+    }
+
+    public Money getImportValue() {
+        return importValue;
+    }
+
+    public BigDecimal getImportWeightKg() {
+        return importWeightKg;
+    }
+
+    public BigDecimal getBalanceOfPayments() {
+        return balanceOfPayments;
+    }
+
+    public String getDataSource() {
+        return dataSource;
     }
 
     @Override

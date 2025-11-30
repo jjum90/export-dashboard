@@ -40,10 +40,113 @@ spring:
     redis:
       time-to-live: 600000
 
+  # Spring Batch Configuration
+  batch:
+    job:
+      enabled: false  # Prevent auto-run on startup
+    jdbc:
+      initialize-schema: always
+      table-prefix: BATCH_
+
+  # Quartz Scheduler Configuration
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: ExportDashboardScheduler
+            instanceId: AUTO
+          jobStore:
+            class: org.quartz.impl.jdbcjobstore.JobStoreTX
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+            tablePrefix: QRTZ_
+            isClustered: true
+            clusterCheckinInterval: 20000
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 10
+            threadPriority: 5
+
 server:
   port: 8080
   servlet:
     context-path: /api
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - feign.FeignException
+    instances:
+      customsApi:
+        baseConfig: default
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 1000
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - feign.FeignException
+    instances:
+      customsApi:
+        baseConfig: default
+        maxAttempts: 4
+        waitDuration: 1000
+        exponentialBackoffMultiplier: 2
+
+  ratelimiter:
+    configs:
+      default:
+        registerHealthIndicator: true
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 5s
+    instances:
+      customsApi:
+        baseConfig: default
+        limitForPeriod: 5  # 초당 5건 제한
+        limitRefreshPeriod: 1s
+
+# Customs API Configuration
+customs:
+  api:
+    base-url: ${CUSTOMS_API_BASE_URL:https://unipass.customs.go.kr:38010/ext/rest}
+    service-key: ${CUSTOMS_API_SERVICE_KEY:YOUR_API_KEY}
+    connect-timeout: 10000
+    read-timeout: 30000
+
+# Batch Job Configuration
+batch:
+  customs-sync:
+    enabled: ${BATCH_CUSTOMS_SYNC_ENABLED:true}
+    cron: ${BATCH_CUSTOMS_SYNC_CRON:0 0 2 1 * ?}  # 매월 1일 새벽 2시
+    chunk-size: 10
+    excel-file-path: ${BATCH_IT_PRODUCT_EXCEL_PATH:classpath:data/it-product-codes.xlsx}
 
 management:
   endpoints:

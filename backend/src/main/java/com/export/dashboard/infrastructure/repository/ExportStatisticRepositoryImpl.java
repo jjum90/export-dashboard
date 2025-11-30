@@ -42,6 +42,13 @@ public class ExportStatisticRepositoryImpl implements ExportStatisticRepository 
     }
 
     @Override
+    public Optional<ExportStatistic> findByCountryAndProductCategoryAndPeriod(
+            Country country, ProductCategory productCategory, Integer year, Integer month) {
+        return jpaExportStatisticRepository.findByCountryAndProductAndPeriod(
+            country, productCategory, year, month);
+    }
+
+    @Override
     public List<ExportStatistic> findAllByCountryAndProductAndPeriod(
             Country country, ProductCategory productCategory, ExportPeriod period) {
         return jpaExportStatisticRepository.findAllByCountryAndProductAndPeriod(
